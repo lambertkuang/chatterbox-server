@@ -11,7 +11,8 @@ this file and include it in basic-server.js so that it actually works.
 *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html.
 
 **************************************************************/
-
+var url = require('url');
+var formidable = require('formidable');
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -45,6 +46,8 @@ var requestHandler = function(request, response) {
   // which includes the status and all headers.
   response.writeHead(statusCode, headers);
 
+  var urlObj = url.parse(request.url, true);
+
   // Make sure to always call response.end() - Node may not send
   // anything back to the client until you do. The string you pass to
   // response.end() will be the body of the response - i.e. what shows
@@ -52,7 +55,37 @@ var requestHandler = function(request, response) {
   //
   // Calling .end "flushes" the response's internal buffer, forcing
   // node to actually send all the data over to the client.
-  response.end("Hello, World!");
+
+  var router = {
+    "GET" : {
+      "/" : function (cb) {
+        cb("your at home");
+      },
+      "/messages" : function (cb) {
+        cb("your messages");
+      },
+      "/favicon.ico" : function (cb) {
+        cb("");
+      }
+    },
+    "POST" : {
+      "/" : function (cb) {
+        cb();
+      }
+    },
+    "PUT" : {},
+    "DELETE" : {}
+  };
+
+  console.log(urlObj);
+
+  if (router[request.method][urlObj.path]) {
+    router[request.method][urlObj.path](function (message) {
+      response.end(message);
+    });
+  } else {
+    response.end("Not found");
+  }
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
