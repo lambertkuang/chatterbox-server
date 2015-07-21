@@ -87,11 +87,18 @@ var requestHandler = function(request, response) {
       }
     },
     "PUT" : {},
-    "DELETE" : {}
+    "DELETE" : {},
+    "OPTIONS" : {
+      "/classes/messages" : function(cb) {
+        headers['Allow'] = 'POST,GET,PUT,DELETE,OPTIONS';
+        cb("");
+      }
+    }
   };
 
-  if (router[request.method][urlObj.path]) {
-    router[request.method][urlObj.path](function (message) {
+
+  if (router[request.method][urlObj.pathname]) {
+    router[request.method][urlObj.pathname](function (message) {
       // .writeHead() writes to the request line and headers of the response,
       // which includes the status and all headers.
       response.writeHead(statusCode, headers);
