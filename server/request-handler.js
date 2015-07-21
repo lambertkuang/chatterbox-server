@@ -13,6 +13,14 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 var url = require('url');
 var formidable = require('formidable');
+
+var messages = [
+  { user: "mark", text: "Hey man" },
+  { user: "lambert", text: "Yo" },
+  { user: "mark", text: "Sup" },
+  { user: "lambert", text: "Nuffin" }
+];
+
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
   //
@@ -62,7 +70,8 @@ var requestHandler = function(request, response) {
         cb("your at home");
       },
       "/messages" : function (cb) {
-        cb("your messages");
+        response.writeHead(200, {'content-type': 'application/json'});
+        cb(JSON.stringify(messages));
       },
       "/favicon.ico" : function (cb) {
         cb("");
@@ -70,14 +79,18 @@ var requestHandler = function(request, response) {
     },
     "POST" : {
       "/" : function (cb) {
-        cb();
+        var form = new formidable.IncomingForm();
+        form.parse(request, function(err, fields, files) {
+          response.writeHead(200, {'content-type': 'text/plain'});
+          console.log(fields);
+          messages.push(fields);
+          cb("Message received!");
+        });
       }
     },
     "PUT" : {},
     "DELETE" : {}
   };
-
-  console.log(urlObj);
 
   if (router[request.method][urlObj.path]) {
     router[request.method][urlObj.path](function (message) {
