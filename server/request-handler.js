@@ -13,8 +13,20 @@ this file and include it in basic-server.js so that it actually works.
 **************************************************************/
 var url = require('url');
 var formidable = require('formidable');
+var fs = require('fs');
 
-var messages = [];
+var messages;
+
+fs.readFile(__dirname + '/messages.json', function (err, data) {
+  if (err) {
+    messages = [];
+    fs.writeFile(__dirname + '/messages.json', messages, function (err) {
+      if (err) throw err;
+    });
+  } else {
+    messages = JSON.parse(data);
+  }
+});
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -31,6 +43,8 @@ var requestHandler = function(request, response) {
   // Adding more logging to your server can be an easy way to get passive
   // debugging help, but you should always be careful about leaving stray
   // console.logs in your code.
+
+
   console.log("Serving request type " + request.method + " for url " + request.url);
 
   // The outgoing status.
@@ -81,7 +95,13 @@ var requestHandler = function(request, response) {
         var form = new formidable.IncomingForm();
         form.parse(request, function(err, fields, files) {
           statusCode = 201;
+          fields.objectId = Date.now();
           messages.push(fields);
+
+          fs.writeFile(__dirname + '/messages.json', JSON.stringify(messages), function (err) {
+            if (err) throw err;
+          });
+
           cb("Message received!");
         });
       }
@@ -96,18 +116,30 @@ var requestHandler = function(request, response) {
     }
   };
 
+  fs.exists(__dirname + '/static/' + urlObj.pathname, function (exists) {
+    if (exists) {
+      fs.readFile(__dirname + '/static/' + urlObj.pathname, function (err, data) {
+        if (err) {
+          throw err;
+        } else {
+          response.end(data);
+        }
+      });
+    } else {
+      if (router[request.method][urlObj.pathname]) {
+        router[request.method][urlObj.pathname](function (message) {
+          // .writeHead() writes to the request line and headers of the response,
+          // which includes the status and all headers.
+          response.writeHead(statusCode, headers);
+          response.end(message);
+        });
+      } else {
+        response.writeHead(404, headers);
+        response.end("Not found");
+      }
+    }
+  });
 
-  if (router[request.method][urlObj.pathname]) {
-    router[request.method][urlObj.pathname](function (message) {
-      // .writeHead() writes to the request line and headers of the response,
-      // which includes the status and all headers.
-      response.writeHead(statusCode, headers);
-      response.end(message);
-    });
-  } else {
-    response.writeHead(404, headers);
-    response.end("Not found");
-  }
 };
 
 // These headers will allow Cross-Origin Resource Sharing (CORS).
