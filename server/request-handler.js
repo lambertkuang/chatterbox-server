@@ -14,12 +14,7 @@ this file and include it in basic-server.js so that it actually works.
 var url = require('url');
 var formidable = require('formidable');
 
-var messages = [
-  { user: "mark", text: "Hey man" },
-  { user: "lambert", text: "Yo" },
-  { user: "mark", text: "Sup" },
-  { user: "lambert", text: "Nuffin" }
-];
+var messages = [];
 
 var requestHandler = function(request, response) {
   // Request and Response come from node's http module.
@@ -50,10 +45,6 @@ var requestHandler = function(request, response) {
   // other than plain text, like JSON or HTML.
   headers['Content-Type'] = "text/plain";
 
-  // .writeHead() writes to the request line and headers of the response,
-  // which includes the status and all headers.
-  response.writeHead(statusCode, headers);
-
   var urlObj = url.parse(request.url, true);
 
   // Make sure to always call response.end() - Node may not send
@@ -70,19 +61,26 @@ var requestHandler = function(request, response) {
         cb("your at home");
       },
       "/messages" : function (cb) {
-        response.writeHead(200, {'content-type': 'application/json'});
-        cb(JSON.stringify(messages));
+        headers['Content-Type'] = 'application/json';
+        cb(JSON.stringify({ results : messages } ));
       },
       "/favicon.ico" : function (cb) {
         cb("");
+      },
+      "/classes/messages" : function(cb) {
+        headers['Content-Type'] = 'application/json';
+        cb(JSON.stringify({ results : messages } ));
+      },
+      "/classes/room1" : function(cb) {
+        headers['Content-Type'] = 'application/json';
+        cb(JSON.stringify({ results : messages } ));
       }
     },
     "POST" : {
-      "/" : function (cb) {
+      "/classes/messages" : function (cb) {
         var form = new formidable.IncomingForm();
         form.parse(request, function(err, fields, files) {
-          response.writeHead(200, {'content-type': 'text/plain'});
-          console.log(fields);
+          statusCode = 201;
           messages.push(fields);
           cb("Message received!");
         });
@@ -94,9 +92,13 @@ var requestHandler = function(request, response) {
 
   if (router[request.method][urlObj.path]) {
     router[request.method][urlObj.path](function (message) {
+      // .writeHead() writes to the request line and headers of the response,
+      // which includes the status and all headers.
+      response.writeHead(statusCode, headers);
       response.end(message);
     });
   } else {
+    response.writeHead(404, headers);
     response.end("Not found");
   }
 };
